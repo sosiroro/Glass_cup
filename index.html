@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+    <head>
+        <title>AR.js GLB Position Changer</title>
+        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+        <!-- Tailwind CSS for styling the UI elements -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            /* Custom styles for the UI panel */
+            body {
+                margin: 0;
+                overflow: hidden;
+                font-family: "Inter", sans-serif; /* Using Inter font */
+            }
+            #controls {
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 255, 255, 0.9);
+                padding: 15px;
+                border-radius: 12px; /* Rounded corners */
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+                z-index: 10;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                width: 90%; /* Fluid width */
+                max-width: 400px; /* Max width for larger screens */
+            }
+            #controls label {
+                font-weight: 600;
+                color: #333;
+            }
+            #controls input[type="number"] {
+                width: calc(100% - 20px); /* Adjust width for padding */
+                padding: 8px 10px;
+                margin-top: 4px;
+                border: 1px solid #ccc;
+                border-radius: 8px; /* Rounded corners */
+                font-size: 1rem;
+                box-sizing: border-box; /* Include padding in width */
+            }
+            #controls button {
+                background-color: #4CAF50; /* Green */
+                color: white;
+                padding: 10px 15px;
+                border: none;
+                border-radius: 8px; /* Rounded corners */
+                cursor: pointer;
+                font-size: 1rem;
+                transition: background-color 0.3s ease;
+            }
+            #controls button:hover {
+                background-color: #45a049;
+            }
+            .input-group {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            /* Responsive adjustments */
+            @media (min-width: 768px) {
+                #controls {
+                    flex-direction: row;
+                    justify-content: space-around;
+                    align-items: center;
+                    width: auto;
+                }
+                .input-group {
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 5px;
+                }
+                #controls input[type="number"] {
+                    width: 70px; /* Fixed width for desktop inputs */
+                }
+            }
+        </style>
+    </head>
+
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            vr-mode-ui="enabled: false;"
+            loading-screen="enabled: false;"
+            renderer="logarithmicDepthBuffer: true;"
+            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+            id="scene"
+            embedded
+            gesture-detector
+        >
+            <a-assets>
+                <!-- Ensure 'assets/asset.glb' and 'assets/marker.patt' are correctly placed relative to your HTML file -->
+                <a-asset-item
+                    id="animated-asset"
+                    src="https://cdn.glitch.global/c6077353-8328-4034-9721-3e46c7667f4a/bowser.glb?v=1701358055611"
+                ></a-asset-item>
+                <a-asset-item
+                    id="marker-pattern"
+                    src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/trex-image.fset"
+                ></a-asset-item>
+            </a-assets>
+
+            <a-marker
+                id="animated-marker"
+                type="pattern"
+                preset="custom"
+                url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/trex-image.fset"
+                raycaster="objects: .clickable"
+                emitevents="true"
+                cursor="fuse: false; rayOrigin: mouse;"
+            >
+                <!-- The GLB model entity. Initial position is (0 0 0) relative to the marker. -->
+                <a-entity
+                    id="bowser-model"
+                    scale="1.4628660937744355 1.4628660937744355 1.4628660937744355"
+                    animation-mixer="loop: repeat"
+                    gltf-model="#animated-asset"
+                    class="clickable"
+                    gesture-handler
+                    position="0 -20 0" <!-- Initial position -->
+                ></a-entity>
+            </a-marker>
+
+            <a-entity camera></a-entity>
+        </a-scene>
+
+        <!-- UI for changing GLB position -->
+        <div id="controls">
+            <div class="input-group">
+                <label for="posX">X:</label>
+                <input type="number" id="posX" value="0" step="0.1" class="rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="input-group">
+                <label for="posY">Y:</label>
+                <input type="number" id="posY" value="0" step="0.1" class="rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="input-group">
+                <label for="posZ">Z:</label>
+                <input type="number" id="posZ" value="0" step="0.1" class="rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button id="applyPosition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+                Apply Position
+            </button>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const bowserModel = document.getElementById('bowser-model');
+                const posXInput = document.getElementById('posX');
+                const posYInput = document.getElementById('posY');
+                const posZInput = document.getElementById('posZ');
+                const applyButton = document.getElementById('applyPosition');
+
+                // Function to update the model's position
+                function updateModelPosition() {
+                    const x = parseFloat(posXInput.value);
+                    const y = parseFloat(posYInput.value);
+                    const z = parseFloat(posZInput.value);
+
+                    // Set the position attribute of the a-entity
+                    bowserModel.setAttribute('position', `${x} ${y} ${z}`);
+                    console.log(`Model position updated to: ${x} ${y} ${z}`);
+                }
+
+                // Attach event listener to the button
+                applyButton.addEventListener('click', updateModelPosition);
+
+                // Optional: Update inputs if model's position changes externally (e.g., by gesture-handler)
+                // This might be complex with gesture-handler, but good practice for general A-Frame updates.
+                bowserModel.addEventListener('componentchanged', (evt) => {
+                    if (evt.detail.name === 'position') {
+                        const newPos = evt.detail.newData;
+                        posXInput.value = newPos.x.toFixed(2);
+                        posYInput.value = newPos.y.toFixed(2);
+                        posZInput.value = newPos.z.toFixed(2);
+                    }
+                });
+
+                // Initial update on load
+                updateModelPosition();
+            });
+        </script>
+    </body>
+</html>
